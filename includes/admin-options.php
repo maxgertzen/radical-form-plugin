@@ -34,6 +34,15 @@ function radical_form_add_admin_menu()
         'radical_subscription_form',
         'radical_form_settings_page'
     );
+
+    add_submenu_page(
+        $main_menu_slug,
+        'Logs',
+        'Logs',
+        'manage_options',
+        'radical_logs',
+        'radical_logs_page'
+    );
 }
 
 function radical_admin_page()
@@ -63,6 +72,40 @@ function radical_form_settings_page()
             do_settings_sections('radical-plugin-page');
             submit_button();
             ?>
+        </form>
+    </div>
+<?php
+}
+
+function radical_logs_page()
+{
+    $last_export_log_count = get_transient('radical_last_export_log_count');
+    $last_export_time = get_transient('radical_last_export_time');
+
+    $svg_icon_url = plugin_dir_url(dirname(__FILE__)) . 'assets/excel-icon.svg';
+
+?>
+    <div class="wrap">
+        <h1><?php echo esc_html__('Radical Logs', 'radical-form'); ?></h1>
+        <p>
+            <?php
+            if ($last_export_log_count !== false && $last_export_time !== false) {
+                echo sprintf(
+                    esc_html__('Last export contained %d log entries on %s', 'radical-form'),
+                    $last_export_log_count,
+                    $last_export_time
+                );
+            } else {
+                echo esc_html__('No export data available.', 'radical-form');
+            }
+            ?>
+        </p>
+        <form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+            <input type="hidden" name="action" value="export_logs_to_csv">
+            <button type="submit" class="button">
+                <img id="radical-excel-icon" src="<?php echo esc_url($svg_icon_url); ?>" alt="<?php echo esc_attr__('Export Logs to CSV', 'radical-form'); ?>">
+                <?php echo esc_attr__('Export Logs to CSV', 'radical-form'); ?>
+            </button>
         </form>
     </div>
 <?php

@@ -1,1 +1,7 @@
-#toplevel_page_radical_form img{width:18px !important;}
+#toplevel_page_radical_form img {
+    width:18px !important;
+}
+
+#radical-excel-icon {
+    width: 24px;
+}

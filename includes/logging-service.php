@@ -175,14 +175,20 @@ class Radical_Logging_Service
             wp_die('You do not have sufficient permissions to access this page.');
         }
 
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'radical_form_logs';
+        $logs = $wpdb->get_results("SELECT * FROM $table_name", ARRAY_A);
+
+        $log_count = count($logs);
+        $current_time = current_time('mysql');
+        set_transient('radical_last_export_log_count', $log_count, DAY_IN_SECONDS);
+        set_transient('radical_last_export_time', $current_time, DAY_IN_SECONDS);
+
+
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=logs.csv');
         $output = fopen('php://output', 'w');
         fputcsv($output, array('Time', 'User ID', 'Email', 'Action', 'Details', 'Plugin Version', 'Severity'));
-
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'radical_form_logs';
-        $logs = $wpdb->get_results("SELECT * FROM $table_name", ARRAY_A);
 
         foreach ($logs as $log) {
             $log['user_email'] = $this->decrypt_data($log['user_email']);
