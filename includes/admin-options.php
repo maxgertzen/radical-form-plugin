@@ -50,7 +50,8 @@ function radical_admin_page()
 ?>
     <div class="wrap">
         <h1><?php echo esc_html__('Radical Admin Menu', 'radical-form'); ?></h1>
-        <ul>
+        <ul id="radical-plugin-list">
+            <h2><?php echo esc_html__('Select Plugin', 'radical-form'); ?></h2>
             <li>
                 <a href="<?php echo admin_url('admin.php?page=radical_subscription_form'); ?>">
                     <?php echo esc_html__('Subscription Form', 'radical-form'); ?>
@@ -102,8 +103,8 @@ function radical_logs_page()
         </p>
         <form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
             <input type="hidden" name="action" value="export_logs_to_csv">
-            <button type="submit" class="button">
-                <img id="radical-excel-icon" src="<?php echo esc_url($svg_icon_url); ?>" alt="<?php echo esc_attr__('Export Logs to CSV', 'radical-form'); ?>">
+            <button type="submit" id="radical-export-button" class="button">
+                <img src="<?php echo esc_url($svg_icon_url); ?>" alt="<?php echo esc_attr__('Export Logs to CSV', 'radical-form'); ?>">
                 <?php echo esc_attr__('Export Logs to CSV', 'radical-form'); ?>
             </button>
         </form>

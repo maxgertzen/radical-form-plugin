@@ -208,7 +208,7 @@ class Radical_Logging_Service
         return $utc_time->getTimestamp();
     }
 
-    private function schedule_cron_jobs()
+    public function schedule_cron_jobs()
     {
         if (!wp_next_scheduled('radical_form_archive_cleanup_logs')) {
             wp_schedule_event($this->get_timestamp(4), 'daily', array($this, 'archive_cleanup_logs'));

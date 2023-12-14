@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Radical Form Plugin
  * Description: Provides a form for users to submit their details and select a product variation
- * Version: 1.8.5
+ * Version: 1.8.6
  * Author: Max Gertzen
  * Text Domain: radical-form
  */
@@ -12,13 +12,12 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
-define('PLUGIN_VERSION', '1.8.5');
+define('PLUGIN_VERSION', '1.8.6');
 
 require_once plugin_dir_path(__FILE__) . 'includes/enqueue-scripts.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/utilities.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin-options.php';
-require_once plugin_dir_path(__FILE__) . 'includes/logging-service.php';
 
 function radical_form_init()
 {
@@ -28,6 +27,7 @@ function radical_form_init()
 
 function load_plugin_logger()
 {
+    require_once plugin_dir_path(__FILE__) . 'includes/logging-service.php';
     global $logger;
     $logger = Radical_Logging_Service::getInstance();
     add_action('admin_post_export_logs_to_csv', array($logger, 'export_logs_to_csv'));
@@ -35,10 +35,12 @@ function load_plugin_logger()
 
 register_activation_hook(__FILE__, 'radical_form_activate');
 register_deactivation_hook(__FILE__, 'radical_form_deactivate');
+
 add_action('init', 'radical_form_init');
+add_action('plugins_loaded', 'load_plugin_logger');
+
 add_action('admin_menu', 'radical_form_add_admin_menu');
 add_action('admin_init', 'radical_form_register_settings');
-add_action('plugins_loaded', 'load_plugin_logger');
 
 function radical_form_activate()
 {
