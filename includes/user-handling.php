@@ -15,20 +15,39 @@ function populate_user_data_form()
 
         return rest_ensure_response($user_data);
     } else {
-        return rest_ensure_response(new stdClass()); // Return empty body for not logged in users
+        return rest_ensure_response(new stdClass());
     }
 }
 
 function handle_user_status_and_role($email)
 {
+    global $logger;
+    $action_name = "validating_user";
+
     $user_id = email_exists($email);
 
     if ($user_id && user_can($user_id, 'subscriber')) {
-        return new WP_Error('existing_subscriber', 'User already exists as a subscriber', array('status' => 400));
+        $logger->log_warning($action_name, "user is a subscriber", $email);
+
+        return new WP_Error(
+            'existing_subscriber',
+            'User already exists as a subscriber',
+            array(
+                'status' => 400
+            )
+        );
     }
 
     if ($user_id && !is_user_logged_in()) {
-        return new WP_Error('not_logged_in', 'You must be logged in to update your information.', array('status' => 401));
+        $logger->log_warning($action_name, "user is not logged in", $email);
+
+        return new WP_Error(
+            'not_logged_in',
+            'You must be logged in to update your information.',
+            array(
+                'status' => 401
+            )
+        );
     }
 
     return $user_id;
@@ -36,6 +55,7 @@ function handle_user_status_and_role($email)
 
 function check_user_exists($request)
 {
+    global $logger;
     $email = sanitize_email($request['email']);
     $user_id = handle_user_status_and_role($email);
 
@@ -45,12 +65,31 @@ function check_user_exists($request)
 
     $is_user_exists = (bool) $user_id;
 
+    $logger->log_info(
+        "check_user_exists",
+        "checks made and user exists === $is_user_exists",
+        array(
+            'email' => $email, 'exists' => $is_user_exists
+        )
+    );
+
     return rest_ensure_response(array('isNew' => !$is_user_exists));
 }
 
 function handle_user_submission($request)
 {
+    global $logger;
+    $action_name = "user_submission";
+
+
     $email = sanitize_email($request['email']);
+
+    $logger->log_info(
+        $action_name,
+        "starting user submission and validation",
+        $email
+    );
+
     $user_id = handle_user_status_and_role($email);
 
     if (is_wp_error($user_id)) {
@@ -73,6 +112,7 @@ function handle_user_submission($request)
     }
 
     if (is_wp_error($user_id)) {
+        $logger->log_error($action_name, "user update/creation failed", $email);
         return $user_id;
     }
 
@@ -83,5 +123,6 @@ function handle_user_submission($request)
     wp_set_current_user($user_id);
     wp_set_auth_cookie($user_id);
 
+    $logger->log_info($action_name, "user updated/created successfully", $email);
     return rest_ensure_response(array('message' => 'User processed successfully'));
 }

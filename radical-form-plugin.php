@@ -18,12 +18,26 @@ require_once plugin_dir_path(__FILE__) . 'includes/enqueue-scripts.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/utilities.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin-options.php';
+require_once plugin_dir_path(__FILE__) . 'includes/logging-service.php';
+
+function radical_form_init()
+{
+    require_once plugin_dir_path(__FILE__) . 'includes/rest-api.php';
+    new Radical_Form_REST_API();
+}
+
+function load_plugin_logger()
+{
+    global $logger;
+    $logger = Radical_Logging_Service::getInstance();
+}
 
 register_activation_hook(__FILE__, 'radical_form_activate');
 register_deactivation_hook(__FILE__, 'radical_form_deactivate');
 add_action('init', 'radical_form_init');
 add_action('admin_menu', 'radical_form_add_admin_menu');
 add_action('admin_init', 'radical_form_register_settings');
+add_action('plugins_loaded', 'load_plugin_logger');
 
 function radical_form_activate()
 {

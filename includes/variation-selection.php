@@ -4,7 +4,11 @@ require_once 'utilities.php';
 
 function post_variation_selection($request)
 {
+    global $logger;
+    $action_name = "set_variation_selection";
+
     if (!is_user_logged_in()) {
+        $logger->log_warning($action_name, 'user is not logged in');
         return new WP_Error('not_logged_in', 'User must be logged in to perform this action', array('status' => 401));
     }
 
@@ -22,6 +26,8 @@ function post_variation_selection($request)
     }
 
     WC()->cart->add_to_cart($product_id, 1, $variation_id, array(), $cart_item_data);
+
+    $logger->log_info($action_name, 'variation added to cart', $variation_id);
 
     return rest_ensure_response(array('message' => 'Variation added to cart successfully'));
 }
