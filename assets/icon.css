@@ -1,19 +1,19 @@
-#toplevel_page_radical_form img {
-    width:18px !important;
+#toplevel_page_radical_admin a img {
+  width: 18px !important;
 }
 
 #radical-export-button {
-    display: flex;
-    gap: 4px;
-    justify-content: center;
-    align-items: center;
-    padding: 6px;
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
 }
 
 #radical-export-button img {
-    width: 24px;
+  width: 24px;
 }
 
 #radical-plugin-list a {
-    font-size: 20px;
+  font-size: 20px;
 }

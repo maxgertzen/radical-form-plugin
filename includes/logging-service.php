@@ -6,7 +6,9 @@ class Radical_Logging_Service
 
     public function __construct()
     {
-        register_activation_hook(__FILE__, array($this, 'create_tables'));
+        add_action('radical_form_archive_cleanup_logs', array($this, 'archive_cleanup_logs'));
+        add_action('radical_form_archive_old_logs', array($this, 'archive_old_logs'));
+        add_action('radical_form_process_log_queue', array($this, 'process_log_queue'));
         add_action('init', array($this, 'schedule_cron_jobs'));
     }
 
@@ -36,15 +38,15 @@ class Radical_Logging_Service
     {
         return "CREATE TABLE $table_name (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
-            time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+            time datetime NOT NULL,
             user_id mediumint(9) NOT NULL,
             user_email TEXT DEFAULT '' NOT NULL,
             action varchar(255) NOT NULL,
             details longtext NOT NULL,
             plugin_version varchar(10) NOT NULL,
             severity ENUM('WARNING', 'ERROR', 'INFO') NOT NULL,
-            PRIMARY KEY  (id)
-            INDEX (time)
+            PRIMARY KEY  (id),
+            INDEX time_index (time)
         ) $charset_collate;";
     }
 
@@ -57,7 +59,8 @@ class Radical_Logging_Service
         $sql = $this->get_sql_query($logs_table_name, $charset_collate);
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        error_log('dbDelta result: ' . print_r($result, true));
     }
 
     private function create_archive_table()
@@ -69,19 +72,20 @@ class Radical_Logging_Service
         $sql = $this->get_sql_query($archive_table_name, $charset_collate);
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        error_log('dbDelta result: ' . print_r($result, true));
     }
 
     // Encryption & Decryption
     private function encrypt_data($data)
     {
-        $encryption_key = get_option('radical_form_encryption_key') || 'default_secret_key';
+        $encryption_key = !empty(get_option('radical_form_encryption_key')) ? get_option('radical_form_encryption_key') : 'default_secret_key';
         return openssl_encrypt($data, 'AES-128-CBC', $encryption_key, 0, substr($encryption_key, 0, 16));
     }
 
     private function decrypt_data($data)
     {
-        $encryption_key = get_option('radical_form_encryption_key') || 'default_secret_key';
+        $encryption_key = !empty(get_option('radical_form_encryption_key')) ? get_option('radical_form_encryption_key') : 'default_secret_key';
         return openssl_decrypt($data, 'AES-128-CBC', $encryption_key, 0, substr($encryption_key, 0, 16));
     }
 
@@ -128,13 +132,13 @@ class Radical_Logging_Service
 
             foreach ($this->log_queue as $log_entry) {
                 $rows[] = $wpdb->prepare("(%s, %d, %s, %s, %s, %s, %s)", [
-                    $log_entry['time'],
-                    $log_entry['user_id'],
-                    $log_entry['user_email'],
-                    $log_entry['action'],
-                    $log_entry['details'],
-                    $log_entry['plugin_version'],
-                    $log_entry['severity']
+                    $log_entry['time'], // %s for string (datetime)
+                    $log_entry['user_id'], // %d for integer
+                    $log_entry['user_email'], // %s for string
+                    $log_entry['action'], // %s for string
+                    $log_entry['details'], // %s for string (longtext)
+                    $log_entry['plugin_version'], // %s for string
+                    $log_entry['severity'] // %s for string (ENUM)
                 ]);
             }
 
@@ -148,6 +152,7 @@ class Radical_Logging_Service
 
     private function enqueue_log($severity, $action, $details, $email)
     {
+        error_log("$severity [$action]: $details");
         $data = $this->prepare_logging_data($action, $details, $email);
         $data['severity'] = $severity;
         $this->log_queue[] = $data;
@@ -186,7 +191,7 @@ class Radical_Logging_Service
 
 
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=logs.csv');
+        header("Content-Disposition: attachment; filename=radical-logs_$current_time.csv");
         $output = fopen('php://output', 'w');
         fputcsv($output, array('Time', 'User ID', 'Email', 'Action', 'Details', 'Plugin Version', 'Severity'));
 
@@ -200,36 +205,19 @@ class Radical_Logging_Service
     }
 
     // Cron Jobs (Cleanup & Archive)
-    private function get_timestamp($hours, $minutes = 0)
-    {
-        $israel_time = new DateTime('now', new DateTimeZone('Asia/Jerusalem'));
-        $israel_time = $israel_time->setTime($hours, $minutes);
-        $utc_time = $israel_time->setTimezone(new DateTimeZone('UTC'));
-        return $utc_time->getTimestamp();
-    }
-
-    public function schedule_cron_jobs()
-    {
-        if (!wp_next_scheduled('radical_form_archive_cleanup_logs')) {
-            wp_schedule_event($this->get_timestamp(4), 'daily', array($this, 'archive_cleanup_logs'));
-        }
-        if (!wp_next_scheduled('radical_form_archive_old_logs')) {
-            wp_schedule_event($this->get_timestamp(5), 'daily', array($this, 'archive_old_logs'));
-        }
-
-        if (!wp_next_scheduled('radical_form_process_log_queue')) {
-            wp_schedule_event(time(), 'hourly', array($this, 'process_log_queue'));
-        }
-    }
-
     public function archive_cleanup_logs()
     {
         global $wpdb;
         $archive_table_name = $wpdb->prefix . 'radical_form_logs_archive';
 
-        error_log("archive_cleanup_logs started at " . date("Y-m-d H:i:s"));
-        $wpdb->query("DELETE FROM $archive_table_name WHERE time < DATE_SUB(NOW(), INTERVAL 6 MONTH)");
-        error_log("archive_cleanup_logs finished at " . date("Y-m-d H:i:s"));
+        try {
+            error_log("archive_cleanup_logs started at " . date("Y-m-d H:i:s"));
+            $wpdb->query("DELETE FROM $archive_table_name WHERE time < DATE_SUB(NOW(), INTERVAL 6 MONTH)");
+            error_log("archive_cleanup_logs finished at " . date("Y-m-d H:i:s"));
+        } catch (Exception $e) {
+            error_log("archive_cleanup_logs failed at " . date("Y-m-d H:i:s"));
+            error_log($e->getMessage());
+        }
     }
 
     public function archive_old_logs()
@@ -237,24 +225,58 @@ class Radical_Logging_Service
         global $wpdb;
         $log_table_name = $wpdb->prefix . 'radical_form_logs';
         $archive_table_name = $wpdb->prefix . 'radical_form_logs_archive';
-
         $interval = '3 MONTH';
 
-        error_log("transfering logs to archive started at " . date("Y-m-d H:i:s"));
-        $wpdb->query($wpdb->prepare(
-            "INSERT INTO $archive_table_name (time, user_id, action, details, plugin_version)
-         SELECT time, user_id, action, details, plugin_version FROM $log_table_name
-         WHERE time < DATE_SUB(NOW(), INTERVAL %s)",
-            $interval
-        ));
-        error_log("transfering logs finished at " . date("Y-m-d H:i:s"));
+        try {
+            error_log("transfering logs to archive started at " . date("Y-m-d H:i:s"));
+            $wpdb->query($wpdb->prepare(
+                "INSERT INTO $archive_table_name (time, user_id, action, details, plugin_version)
+             SELECT time, user_id, action, details, plugin_version FROM $log_table_name
+             WHERE time < DATE_SUB(NOW(), INTERVAL %s)",
+                $interval
+            ));
+            error_log("transfering logs finished at " . date("Y-m-d H:i:s"));
 
 
-        error_log("deleting form logs started at " . date("Y-m-d H:i:s"));
-        $wpdb->query($wpdb->prepare(
-            "DELETE FROM $log_table_name WHERE time < DATE_SUB(NOW(), INTERVAL %s)",
-            $interval
-        ));
-        error_log("deleting form logs finished at " . date("Y-m-d H:i:s"));
+            error_log("deleting form logs started at " . date("Y-m-d H:i:s"));
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM $log_table_name WHERE time < DATE_SUB(NOW(), INTERVAL %s)",
+                $interval
+            ));
+            error_log("deleting form logs finished at " . date("Y-m-d H:i:s"));
+        } catch (Exception $e) {
+            error_log("archive_old_logs failed at " . date("Y-m-d H:i:s"));
+            error_log($e->getMessage());
+        }
+    }
+
+    private function get_timestamp($hours, $minutes = 0)
+    {
+        $israel_time = new DateTime('now', new DateTimeZone('Asia/Jerusalem'));
+        $israel_time->setTime($hours, $minutes);
+
+        if ($israel_time < new DateTime('now', new DateTimeZone('Asia/Jerusalem'))) {
+            $israel_time->modify('+1 day');
+        }
+
+        $utc_time = $israel_time->setTimezone(new DateTimeZone('UTC'));
+        return $utc_time->getTimestamp();
+    }
+
+    public function schedule_cron_jobs()
+    {
+        if (!wp_next_scheduled('radical_form_archive_cleanup_logs')) {
+            $success = wp_schedule_event($this->get_timestamp(4), 'daily', 'radical_form_archive_cleanup_logs');
+            error_log("schedule_cron_jobs: wp_schedule_event 'archive_cleanup_logs' result: $success");
+        }
+        if (!wp_next_scheduled('radical_form_archive_old_logs')) {
+            $success = wp_schedule_event($this->get_timestamp(5), 'daily', 'radical_form_archive_old_logs');
+            error_log("schedule_cron_jobs: wp_schedule_event 'archive_old_logs' result: $success");
+        }
+
+        if (!wp_next_scheduled('radical_form_process_log_queue')) {
+            $success = wp_schedule_event(time(), 'hourly', 'radical_form_process_log_queue');
+            error_log("schedule_cron_jobs: wp_schedule_event 'process_log_queue' result: $success");
+        }
     }
 }
