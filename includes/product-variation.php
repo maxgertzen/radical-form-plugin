@@ -16,7 +16,7 @@ function get_product_variation()
     foreach ($variations as $variation) {
         $variation_data[] = array(
             'variationId' => $variation['variation_id'],
-            'price' => $variation['display_price'],
+            'price' => $variation['display_price'] ?? 0,
             'isCustomPriceId' => $variation['variation_id'] == $custom_price_variation_id,
         );
     }
