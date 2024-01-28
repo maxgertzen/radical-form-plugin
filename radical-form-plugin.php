@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Radical Form Plugin
  * Description: Provides a form for users to submit their details and select a product variation
- * Version: 2.1.6
+ * Version: 2.2.1
  * Author: Max Gertzen
  * Text Domain: radical-form
  */
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
-define('PLUGIN_VERSION', '2.1.6');
+define('RADICAL_FORM_PLUGIN_VERSION', '2.2.1');
 
 require_once plugin_dir_path(__FILE__) . 'includes/enqueue-scripts.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcode.php';
@@ -36,15 +36,17 @@ function radical_form_init()
     new Radical_Form_REST_API();
 }
 
-function load_plugin_logger()
+function load_logger_and_textdomain()
 {
     global $logger_service_instance;
     add_action('admin_post_export_logs_to_csv', array($logger_service_instance, 'export_logs_to_csv'));
+
+    load_plugin_textdomain('radical-form', false, basename(dirname(__FILE__)) . '/languages/');
 }
 
 
 add_action('woocommerce_loaded', 'radical_form_init');
-add_action('plugins_loaded', 'load_plugin_logger');
+add_action('plugins_loaded', 'load_logger_and_textdomain');
 
 add_action('admin_menu', 'radical_form_add_admin_menu');
 add_action('admin_init', 'radical_form_register_settings');

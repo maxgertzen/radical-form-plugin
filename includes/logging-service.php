@@ -116,7 +116,7 @@ class Radical_Logging_Service
             'user_email' => $user_email,
             'action' => $action,
             'details' => $serialized_details,
-            'plugin_version' => PLUGIN_VERSION,
+            'plugin_version' => RADICAL_FORM_PLUGIN_VERSION,
         );
     }
 

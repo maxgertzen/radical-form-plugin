@@ -47,19 +47,12 @@ function radical_form_add_admin_menu()
 
 function radical_admin_page()
 {
-?>
-    <div class="wrap">
-        <h1><?php echo esc_html__('Radical Admin Menu', 'radical-form'); ?></h1>
-        <ul id="radical-plugin-list">
-            <h2><?php echo esc_html__('Select Plugin', 'radical-form'); ?></h2>
-            <li>
-                <a href="<?php echo admin_url('admin.php?page=radical_subscription_form'); ?>">
-                    <?php echo esc_html__('Subscription Form', 'radical-form'); ?>
-                </a>
-            </li>
-        </ul>
-    </div>
-<?php
+    function radical_admin_page_callback()
+    {
+        $first_submenu_slug = 'radical_subscription_form';
+        wp_redirect(admin_url('admin.php?page=' . $first_submenu_slug));
+        exit;
+    }
 }
 
 function radical_form_settings_page()

@@ -4,9 +4,9 @@ function radical_enqueue_react_app()
     $plugin_url = plugin_dir_url(dirname(__FILE__));
     if (is_a_page_with_my_shortcode()) {
 
-        wp_enqueue_style('radical-react-app-css', $plugin_url . '/app/assets/style.css', array(), PLUGIN_VERSION);
+        wp_enqueue_style('radical-react-app-css', $plugin_url . '/app/assets/style.css', array(), RADICAL_FORM_PLUGIN_VERSION);
 
-        wp_register_script('radical-react-app', $plugin_url . '/app/assets/index.iife.js', array(), PLUGIN_VERSION, true);
+        wp_register_script('radical-react-app', $plugin_url . '/app/assets/radical-form.iife.js', array('wp-element'), RADICAL_FORM_PLUGIN_VERSION, false);
 
         wp_localize_script('radical-react-app', 'radicalFormAjaxObj', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -14,7 +14,7 @@ function radical_enqueue_react_app()
         ));
 
         wp_enqueue_script('radical-react-app');
-        wp_enqueue_script('cart-refresh-script', $plugin_url . '/js/cart-refresh.js', array('jquery'), PLUGIN_VERSION, true);
+        wp_enqueue_script('cart-refresh-script', $plugin_url . '/js/cart-refresh.js', array('jquery'), RADICAL_FORM_PLUGIN_VERSION, true);
     }
 }
 
